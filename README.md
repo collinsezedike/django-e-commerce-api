@@ -8,7 +8,10 @@ An e-commerce backend api built with django rest framework
 Yet to start anything until login systems have been set up.
 
 ### 2/ Core
-Working on the login endpoints
+Still working on the login endpoints
+Decided to go with the rest_framework authtoken because of "Authorization: Token: token"
+Need to add validators for the user
+Working on the logout endpoint
 
 ### 3/ Customers
 Complete, for now.

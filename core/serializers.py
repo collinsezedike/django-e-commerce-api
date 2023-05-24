@@ -17,6 +17,7 @@ class UserSerializer(serializers.ModelSerializer):
             "password2",
             "type",
         )
+        extra_kwargs = {"password": {"write_only": True}}
 
     def validate(self, request_data):
         """
@@ -32,7 +33,6 @@ class UserSerializer(serializers.ModelSerializer):
         return request_data
 
     def create(self, validated_data):
-
         user = User.objects.create_user(
             email=validated_data["email"],
             first_name=validated_data["first_name"],
@@ -53,3 +53,30 @@ class UserSerializer(serializers.ModelSerializer):
                 setattr(instance, field, validated_data[field])
         instance.save()
         return instance
+
+## This would be the user validator component.
+# class LoginSerializer(serializers.Serializer):
+#     email = serializers.EmailField()
+#     password = serializers.CharField(style={"input_type": "password"})
+
+#     def validate(self, attrs):
+#         email = attrs.get("email")
+#         password = attrs.get("password")
+
+#         if email and password:
+#             print(email, password)
+#             user = authenticate(email=email, password=password)
+#             if user:
+#                 if not user.is_active:
+#                     msg = _("User account is disabled.")
+#                     raise serializers.ValidationError(msg)
+#             else:
+#                 msg = _("Invalid Email address or password")
+#                 raise serializers.ValidationError(msg)
+#         else:
+#             msg = _('Must include "email" and "password".')
+#             raise serializers.ValidationError(msg)
+
+#         attrs["user"] = user
+        # return attrs
+
