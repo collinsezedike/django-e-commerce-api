@@ -1,17 +1,19 @@
 from django.contrib.auth import authenticate
 
 from rest_framework.authtoken.models import Token
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework import status
 
 from .models import User
 from .serializers import UserSerializer
+from .permissions import AdminReadOnly
 
 
 # Create your views here.
 @api_view(["GET", "POST"])
+@permission_classes([AdminReadOnly])
 def get_and_create_users(request):
     # POST REQUEST
     if request.method == "POST":
@@ -33,6 +35,7 @@ def get_and_create_users(request):
 
 
 @api_view(["GET", "PUT", "DELETE"])
+@permission_classes([IsAdminUser])
 def read_update_and_delete_user_by_id(request, id):
     if User.objects.filter(id=id).exists():
         user = User.objects.get(id=id)
@@ -69,12 +72,8 @@ def login(request):
     password = request.data.get("password")
     user = authenticate(email=email, password=password)
     if user is not None:
-        token = Token.objects.get_or_creat
-        if token.is_valid():
-            token.save()
-            return Response(token.data, status=status.HTTP_401_UNAUTHORIZED)
-        error_msg = { "error": {next(iter(token.errors)): next(iter(token.errors.values()))[0]} }
-        return Response(error_msg, status=status.HTTP_401_UNAUTHORIZED)
+        token = Token.objects.get_or_create(user=user)
+        return Response({"token": token[0].key}, status=status.HTTP_200_OK)
     error_msg = { "error": "Invalid email address or password" }
     return Response(error_msg, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -82,12 +81,11 @@ def login(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def logout(request):
-    print(request.user)
     tokenExists = Token.objects.filter(user=request.user)
     if tokenExists:
         token = Token.objects.get(user=request.user)
         token.delete()
-        success_msg = { "success": "Logged user out successfully"}
+        success_msg = { "success": "Logged user out successfully" }
         return Response(success_msg, status=status.HTTP_200_OK)
-    error_msg = { "error": "User is not authenticated"}
-    return Response(error_msg, status=status.HTTP_200_OK)
+    error_msg = { "error": "User is not authenticated" }
+    return Response(error_msg, status=status.HTTP_401_UNAUTHORIZED)

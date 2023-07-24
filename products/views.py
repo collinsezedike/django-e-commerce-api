@@ -1,12 +1,17 @@
-from rest_framework.decorators import api_view
+from django.db.models import Q
+
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
+
+from core.permissions import IsAdminOrReadOnly
 
 from .models import Product
 from .serializers import ProductSerializer
 
 
 @api_view(["GET", "POST"])
+@permission_classes([IsAdminOrReadOnly])
 def read_and_create_products(request):
     # POST REQUEST
     if request.method == "POST":
@@ -16,7 +21,7 @@ def read_and_create_products(request):
             return Response(new_product_serializer.data, status=status.HTTP_201_CREATED)
         error_msg = {"error": "incomplete or invalid data passed"}
         return Response(error_msg, status=status.HTTP_400_BAD_REQUEST)
-    
+
     # GET REQUEST
     products = Product.objects.all()
     serialized_products = ProductSerializer(products, many=True)
@@ -25,13 +30,15 @@ def read_and_create_products(request):
 
 
 @api_view(["GET", "PUT", "DELETE"])
+@permission_classes([IsAdminOrReadOnly])
 def read_update_and_delete_product_by_id(request, id):
     if Product.objects.filter(id=id).exists():
         product = Product.objects.get(id=id)
 
         # PUT REQUEST
         if request.method == "PUT":
-            serialized_product = ProductSerializer(instance=product, data=request.data, partial=True)
+            serialized_product = ProductSerializer(
+                instance=product, data=request.data, partial=True)
             if serialized_product.is_valid():
                 serialized_product.save()
                 return Response(serialized_product.data, status=status.HTTP_200_OK)
@@ -40,7 +47,8 @@ def read_update_and_delete_product_by_id(request, id):
         # DELETE REQUEST
         if request.method == "DELETE":
             product.delete()
-            success_msg = {"success": f"product with id {id} deleted successfully"}
+            success_msg = {
+                "success": f"product with id {id} deleted successfully"}
             return Response(success_msg, status=status.HTTP_204_NO_CONTENT)
 
         # GET REQUEST
@@ -53,6 +61,9 @@ def read_update_and_delete_product_by_id(request, id):
 
 @api_view(["GET"])
 def search_product(request):
-    suggested_products = Product.objects.filter()   # check name, price and description
+    search_term = request.GET.get("q", "").strip()
+    suggested_products = Product.objects.filter(Q(name__icontains=search_term) | 
+                                                Q(description__icontains=search_term) | 
+                                                Q(category__icontains=search_term))   # check name, price and description
     serialized_suggestions = ProductSerializer(suggested_products, many=True)
-    return Response(serialized_suggestions, status=status.HTTP_200_OK)
+    return Response(serialized_suggestions.data, status=status.HTTP_200_OK)
